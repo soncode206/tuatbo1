@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tặng bé</title>
+</head>
+<body style="background-color: #fff0fc">
+    <div style="text-align: center; margin-top: 300px;">
+    <b style="color: red;">Mật khẩu: </b>
+    <input type="password" id="passwordInput" placeholder="Nhập mật khẩu" onkeydown="if(event.key === 'Enter') checkPassword()">
+    <button onclick="checkPassword()">Xác nhận</button>
+    </div>
+    <script>
+    function checkPassword() {
+        var password = document.getElementById("passwordInput").value;
+        if (password == '15112006') {
+            window.location.href = "tang2.html";
+        } else {
+            alert("Sai rồi! DỐT");
+        }
+    }
+    </script>
+</body>
+</html>
