@@ -1,25 +1,353 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tặng bé</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dịch phụ đề video sang tiếng Việt</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677;
+    --line: #d9dde5; --accent: #1f5fd6; --accent-text: #ffffff; --err: #b3261e; --hl: #e6eefc;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171d; --card: #1d222b; --text: #e8ebf1; --muted: #98a1b3;
+            --line: #323a48; --accent: #6b9bff; --accent-text: #0e1420; --err: #ff8a80; --hl: #262f42; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 20px; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+         padding: 18px; margin-bottom: 16px; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  input[type=file], input[type=number], select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg); color: var(--text); font: inherit; }
+  input[type=color] { width: 56px; height: 38px; padding: 2px; border: 1px solid var(--line);
+                      border-radius: 6px; background: var(--bg); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .row > div { flex: 1; min-width: 130px; }
+  .check { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 10px 0 0; }
+  .check input { width: auto; }
+  button { padding: 11px 16px; border: 0; border-radius: 6px; background: var(--accent);
+           color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; cursor: default; }
+  #go { margin-top: 18px; width: 100%; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  video { width: 100%; max-height: 70vh; background: #000; border-radius: 8px; display: block; }
+  #status { margin: 0 0 8px; }
+  #status.error { color: var(--err); }
+  progress { width: 100%; height: 10px; }
+  #prog { display: none; margin-top: 4px; }
+  #prog small { color: var(--muted); }
+  #tools { display: none; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  #lines { margin-top: 12px; max-height: 280px; overflow: auto; border: 1px solid var(--line);
+           border-radius: 8px; display: none; }
+  .line { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .line:last-child { border-bottom: 0; }
+  .line.active { background: var(--hl); }
+  .line .t { color: var(--muted); font-size: .82rem; }
+  .line .o { color: var(--muted); font-size: .9rem; }
+  .note { color: var(--muted); font-size: .9rem; margin-top: 10px; }
+</style>
+<style id="cuestyle"></style>
 </head>
-<body style="background-color: #fff0fc">
-    <div style="text-align: center; margin-top: 300px;">
-    <b style="color: red;">Mật khẩu: </b>
-    <input type="password" id="passwordInput" placeholder="Nhập mật khẩu" onkeydown="if(event.key === 'Enter') checkPassword()">
-    <button onclick="checkPassword()">Xác nhận</button>
+<body>
+<main>
+  <h1>Dịch phụ đề video sang tiếng Việt</h1>
+  <p class="sub">Chạy ngay trong trình duyệt: nhận dạng giọng nói, dịch và hiện phụ đề trên video. Video không bị tải lên máy chủ nào.</p>
+
+  <div class="box">
+    <label for="file">Video hoặc âm thanh</label>
+    <input id="file" type="file" accept="video/*,audio/*">
+
+    <div class="row">
+      <div>
+        <label for="model">Mô hình nhận dạng</label>
+        <select id="model">
+          <option value="Xenova/whisper-tiny">Tiny (~40 MB, nhanh, kém chính xác)</option>
+          <option value="Xenova/whisper-base" selected>Base (~80 MB, cân bằng)</option>
+          <option value="Xenova/whisper-small">Small (~250 MB, chính xác hơn, chậm)</option>
+        </select>
+      </div>
+      <div>
+        <label for="src">Ngôn ngữ trong video</label>
+        <select id="src">
+          <option value="">Tự phát hiện</option>
+          <option value="english">Tiếng Anh</option>
+          <option value="japanese">Tiếng Nhật</option>
+          <option value="korean">Tiếng Hàn</option>
+          <option value="chinese">Tiếng Trung</option>
+          <option value="vietnamese">Tiếng Việt (không dịch)</option>
+        </select>
+      </div>
     </div>
-    <script>
-    function checkPassword() {
-        var password = document.getElementById("passwordInput").value;
-        if (password == '15112006') {
-            window.location.href = "tang2.html";
-        } else {
-            alert("Sai rồi! DỐT");
-        }
+
+    <div class="row">
+      <div>
+        <label for="size">Cỡ chữ phụ đề</label>
+        <input id="size" type="number" min="12" max="60" value="26">
+      </div>
+      <div style="flex:0 0 auto">
+        <label for="color">Màu chữ</label>
+        <input id="color" type="color" value="#ffeb3b">
+      </div>
+    </div>
+    <label class="check"><input id="bilingual" type="checkbox"> Hiện cả bản gốc dưới tiếng Việt</label>
+
+    <button id="go" disabled>Bắt đầu dịch</button>
+  </div>
+
+  <div class="box">
+    <p id="status">Chọn một video để bắt đầu.</p>
+    <div id="prog"><progress id="bar" max="100" value="0"></progress><small id="barlabel"></small></div>
+    <video id="player" controls playsinline></video>
+    <div id="tools">
+      <button class="ghost" id="dlSrt">Tải file .srt</button>
+      <button class="ghost" id="dlVtt">Tải file .vtt</button>
+    </div>
+    <div id="lines"></div>
+    <p class="note">Lần đầu chạy sẽ tải mô hình về (lưu lại trong trình duyệt cho các lần sau). Có card đồ họa và trình duyệt Chrome/Edge mới thì nhanh hơn nhiều. Video dài trên 20–30 phút dễ bị thiếu bộ nhớ.</p>
+  </div>
+</main>
+
+<script type="module">
+import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1";
+
+const $ = id => document.getElementById(id);
+const player = $("player");
+let videoUrl = null, asr = null, asrName = null, cues = [], trackUrl = null;
+
+function setStatus(text, isError = false) {
+  $("status").textContent = text;
+  $("status").className = isError ? "error" : "";
+}
+
+function applyCueStyle() {
+  $("cuestyle").textContent =
+    `video::cue { color: ${$("color").value}; font-size: ${$("size").value}px; font-weight: 700; ` +
+    `background: rgba(0,0,0,.55); }`;
+}
+$("color").addEventListener("input", applyCueStyle);
+$("size").addEventListener("input", applyCueStyle);
+applyCueStyle();
+
+$("file").addEventListener("change", () => {
+  const f = $("file").files[0];
+  if (!f) return;
+  if (videoUrl) URL.revokeObjectURL(videoUrl);
+  videoUrl = URL.createObjectURL(f);
+  player.src = videoUrl;
+  clearResult();
+  $("go").disabled = false;
+  setStatus("Sẵn sàng. Bấm “Bắt đầu dịch”.");
+});
+
+function clearResult() {
+  cues = [];
+  [...player.querySelectorAll("track")].forEach(t => t.remove());
+  $("tools").style.display = "none";
+  $("lines").style.display = "none";
+  $("lines").innerHTML = "";
+}
+
+/* ---------- Âm thanh -> Float32 16 kHz mono ---------- */
+async function getAudio(file) {
+  const buf = await file.arrayBuffer();
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx();
+  let decoded;
+  try { decoded = await ctx.decodeAudioData(buf); }
+  finally { ctx.close(); }
+  const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+  const src = off.createBufferSource();
+  src.buffer = decoded;
+  src.connect(off.destination);
+  src.start();
+  return (await off.startRendering()).getChannelData(0);
+}
+
+/* ---------- Nhận dạng ---------- */
+async function loadModel(name) {
+  if (asr && asrName === name) return;
+  const hasGpu = !!navigator.gpu;
+  const options = {
+    device: hasGpu ? "webgpu" : "wasm",
+    dtype: hasGpu ? { encoder_model: "fp32", decoder_model_merged: "q4" } : "q8",
+    progress_callback: p => {
+      if (p.status === "progress") {
+        $("prog").style.display = "block";
+        $("bar").value = p.progress || 0;
+        $("barlabel").textContent = ` Tải mô hình: ${(p.file || "").split("/").pop()} ${Math.round(p.progress || 0)}%`;
+      }
     }
-    </script>
+  };
+  try {
+    asr = await pipeline("automatic-speech-recognition", name, options);
+  } catch (e) {
+    if (!hasGpu) throw e;
+    // WebGPU lỗi -> thử lại bằng CPU
+    options.device = "wasm"; options.dtype = "q8";
+    asr = await pipeline("automatic-speech-recognition", name, options);
+  }
+  asrName = name;
+  $("prog").style.display = "none";
+}
+
+/* ---------- Dịch (Google Translate không chính thức, dự phòng MyMemory) ---------- */
+async function translateOne(text) {
+  try {
+    const u = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=" + encodeURIComponent(text);
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(r.status);
+    const j = await r.json();
+    const out = j[0].map(x => x[0]).join("");
+    if (out) return out;
+  } catch (e) { /* thử dịch vụ dự phòng */ }
+  try {
+    const u = "https://api.mymemory.translated.net/get?langpair=autodetect|vi&q=" + encodeURIComponent(text.slice(0, 480));
+    const j = await (await fetch(u)).json();
+    return j.responseData.translatedText || text;
+  } catch (e) { return text; }
+}
+
+async function translateAll(list, onProgress) {
+  const result = new Array(list.length);
+  let next = 0, done = 0;
+  async function worker() {
+    while (next < list.length) {
+      const i = next++;
+      result[i] = await translateOne(list[i]);
+      onProgress(++done, list.length);
+    }
+  }
+  await Promise.all([worker(), worker(), worker()]);
+  return result;
+}
+
+/* ---------- Định dạng phụ đề ---------- */
+function ts(sec, comma) {
+  const ms = Math.round(sec * 1000);
+  const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60,
+        s = Math.floor(ms / 1000) % 60, r = ms % 1000;
+  const p = (n, w = 2) => String(n).padStart(w, "0");
+  return `${p(h)}:${p(m)}:${p(s)}${comma ? "," : "."}${p(r, 3)}`;
+}
+function cueText(c) {
+  return c.vi + ($("bilingual").checked && c.vi !== c.orig ? "\n" + c.orig : "");
+}
+function toSrt() {
+  return cues.map((c, i) => `${i + 1}\n${ts(c.start, true)} --> ${ts(c.end, true)}\n${cueText(c)}\n`).join("\n");
+}
+function toVtt() {
+  return "WEBVTT\n\n" + cues.map(c => `${ts(c.start)} --> ${ts(c.end)}\n${cueText(c)}\n`).join("\n");
+}
+
+function showCues() {
+  [...player.querySelectorAll("track")].forEach(t => t.remove());
+  if (trackUrl) URL.revokeObjectURL(trackUrl);
+  trackUrl = URL.createObjectURL(new Blob([toVtt()], { type: "text/vtt" }));
+  const t = document.createElement("track");
+  t.kind = "subtitles"; t.label = "Tiếng Việt"; t.srclang = "vi"; t.default = true; t.src = trackUrl;
+  player.appendChild(t);
+  t.addEventListener("load", () => { t.track.mode = "showing"; });
+  t.track.mode = "showing";
+
+  const box = $("lines");
+  box.innerHTML = "";
+  cues.forEach((c, i) => {
+    const d = document.createElement("div");
+    d.className = "line"; d.id = "line" + i;
+    const t1 = document.createElement("div"); t1.className = "t"; t1.textContent = ts(c.start).slice(0, 8);
+    const t2 = document.createElement("div"); t2.textContent = c.vi;
+    d.append(t1, t2);
+    if (c.vi !== c.orig) {
+      const t3 = document.createElement("div"); t3.className = "o"; t3.textContent = c.orig; d.append(t3);
+    }
+    d.onclick = () => { player.currentTime = c.start; player.play(); };
+    box.appendChild(d);
+  });
+  box.style.display = "block";
+  $("tools").style.display = "flex";
+}
+
+player.addEventListener("timeupdate", () => {
+  if (!cues.length) return;
+  const t = player.currentTime;
+  const i = cues.findIndex(c => t >= c.start && t < c.end);
+  document.querySelectorAll(".line.active").forEach(e => e.classList.remove("active"));
+  if (i >= 0) {
+    const el = $("line" + i);
+    el.classList.add("active");
+    const box = $("lines");
+    if (el.offsetTop < box.scrollTop || el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight) {
+      box.scrollTop = el.offsetTop - 40;
+    }
+  }
+});
+
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$("dlSrt").onclick = () => download("phude_vi.srt", toSrt());
+$("dlVtt").onclick = () => download("phude_vi.vtt", toVtt());
+$("bilingual").addEventListener("change", () => { if (cues.length) showCues(); });
+
+/* ---------- Chạy ---------- */
+$("go").addEventListener("click", async () => {
+  const file = $("file").files[0];
+  if (!file) return;
+  $("go").disabled = true;
+  clearResult();
+  try {
+    setStatus("Bước 1/4: đang đọc âm thanh từ video…");
+    const audio = await getAudio(file);
+
+    setStatus("Bước 2/4: đang tải mô hình nhận dạng…");
+    await loadModel($("model").value);
+
+    setStatus("Bước 3/4: đang nhận dạng giọng nói (có thể mất vài phút, trang vẫn đang chạy)…");
+    const opts = { chunk_length_s: 30, stride_length_s: 5, return_timestamps: true, task: "transcribe" };
+    if ($("src").value) opts.language = $("src").value;
+    const out = await asr(audio, opts);
+
+    const total = audio.length / 16000;
+    const segs = (out.chunks || [])
+      .map(c => ({
+        start: c.timestamp[0] ?? 0,
+        end: c.timestamp[1] ?? Math.min((c.timestamp[0] ?? 0) + 3, total),
+        orig: (c.text || "").trim()
+      }))
+      .filter(s => s.orig);
+    if (!segs.length) throw new Error("Không nhận dạng được lời nói nào trong video.");
+
+    if ($("src").value === "vietnamese") {
+      cues = segs.map(s => ({ ...s, vi: s.orig }));
+    } else {
+      setStatus(`Bước 4/4: đang dịch ${segs.length} đoạn sang tiếng Việt…`);
+      const vi = await translateAll(segs.map(s => s.orig), (d, n) => setStatus(`Bước 4/4: đã dịch ${d}/${n} đoạn…`));
+      cues = segs.map((s, i) => ({ ...s, vi: vi[i] }));
+    }
+
+    showCues();
+    setStatus(`Xong: ${cues.length} đoạn phụ đề. Bấm phát video để xem.`);
+  } catch (e) {
+    console.error(e);
+    setStatus("Lỗi: " + (e.message || e), true);
+  } finally {
+    $("go").disabled = false;
+    $("prog").style.display = "none";
+  }
+});
+</script>
 </body>
 </html>
